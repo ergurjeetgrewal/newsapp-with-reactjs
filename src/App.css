@@ -36,3 +36,9 @@
     transform: rotate(360deg);
   }
 }
+.cardtopbar{
+  display: flex;
+  justify-content: flex-end;
+  position: absolute;
+  right: 0;
+}

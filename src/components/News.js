@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import NewsItem from './NewsItem'
+import InfiniteScroll from "react-infinite-scroll-component";
 import Spinner from './Spinner';
 
 export class News extends Component {
@@ -19,53 +20,76 @@ export class News extends Component {
     }
 
     articles = []
-    constructor() {
-        super();
+    constructor(props) {
+        function capitalizeFirstLetter(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+        super(props);
         this.state = {
             articles: this.articles,
-            loading: false,
+            loading: true,
             page: 1,
+            totalArticles: 0
         }
+        document.title = `${capitalizeFirstLetter(this.props.category)} - NewsToday Get latest news`;
     }
 
     async updateNews() {
-        const url = `https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=9f90b9b758584a2e96bbbf161501f334&page=${this.state.page}&pageSize=${this.props.pageSize}`
-        this.setState({ loading: true })
+        this.props.setProgress(10);
+        console.log(this.props.apiKey)
+        const url = `https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=${this.props.apiKey}&page=${this.state.page}&pageSize=${this.props.pageSize}`
         let data = await fetch(url);
+        this.props.setProgress(30);
         data = await data.json()
         this.setState({ articles: data.articles, totalArticles: data.totalResults, loading: false })
-        console.log(data)
+        this.props.setProgress(70);
+        // console.log(data)
+        this.props.setProgress(100);
     }
     async componentDidMount() {
         this.updateNews();
     }
-    handlenextclick = async () => {
-        this.setState({page:this.state.page+1})
-        this.updateNews();
+    // handlenextclick = async () => {
+    //     this.setState({ page: this.state.page + 1 })
+    //     this.updateNews();
+    // }
+    // handlepreclick = async () => {
+    //     this.setState({ page: this.state.page - 1 })
+    //     this.updateNews();
+    // }
+    fetchMoreData = async () => {
+        this.setState({ page: this.state.page + 1 })
+        const url = `https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=${this.props.apiKey}&page=${this.state.page}&pageSize=${this.props.pageSize}`
+        let data = await fetch(url);
+        data = await data.json()
+        this.setState({
+            articles: this.state.articles.concat(data.articles),
+            totalArticles: data.totalResults,
+        })
     }
-    handlepreclick = async () => {
-        this.setState({page:this.state.page-1})
-        this.updateNews();
-    }
+
     render() {
         return (
-            <>
-                <div className="container my-3">
-                    <h2 className='text-center' style={{ margin: '35px 0px' }}>NewsToday - {this.props.headtitle}</h2>
-                    {this.state.loading ? <Spinner /> :
-                        <div className="row">
-                            {this.state.articles.map((element) => {
-                                return <div className="col-md-4" key={element.url}>
-                                    <NewsItem title={element.title == null ? element.title : element.title.slice(0, 45)} description={element.description == null ? element.description : element.description.slice(0, 88)} imgUrl={element.urlToImage == null ? "https://www.tbdhu.com/themes/de_theme/img/default-news-image-front.jpg" : element.urlToImage} newsurl={element.url} author={element.author} date={element.publishedAt} source={element.source.name} />
-                                </div>
-                            })}
-                        </div>}
-                </div>
-                <div className='container d-flex justify-content-between'>
-                    <button type='button' disabled={this.state.page <= 1} className="btn-sm btn-secondary" onClick={this.handlepreclick}>&larr; Prev</button>
-                    <button type='button' disabled={this.state.page + 1 > Math.ceil(this.state.totalArticles / this.props.pageSize)} className="btn-sm btn-primary" onClick={this.handlenextclick}>Next &rarr;</button>
-                </div>
-            </>
+            <div>
+                <h2 className='text-center' style={{ margin: '35px 0px' }}>NewsToday - {this.props.headtitle}</h2>
+                <InfiniteScroll
+                    dataLength={this.state.articles.length}
+                    next={this.fetchMoreData}
+                    hasMore={this.state.articles.length !== this.state.totalArticles}
+                    loader={<Spinner></Spinner>}
+                >
+                    <div className="container">
+                        {this.state.loading && <Spinner /> }
+                            <div className="row">
+                                {this.state.articles.map((element) => {
+                                    return <div className="col-md-4" key={element.url}>
+                                        <NewsItem title={element.title == null ? element.title : element.title.slice(0, 45)} description={element.description == null ? element.description : element.description.slice(0, 88)} imgUrl={element.urlToImage == null ? "https://www.tbdhu.com/themes/de_theme/img/default-news-image-front.jpg" : element.urlToImage} newsurl={element.url} author={element.author} date={element.publishedAt} source={element.source.name} />
+                                    </div>
+                                })}
+                            </div>
+                    </div>
+                </InfiniteScroll>
+            </div>
         )
     }
 }
